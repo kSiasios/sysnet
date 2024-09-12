@@ -1,0 +1,8 @@
+demo.js
+README.md
+__tests__/
+*.test.js
+*.spec.js
+tsconfig.json
+.env
+node_modules/
