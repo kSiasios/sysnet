@@ -44,3 +44,69 @@ export function getStatus() {
 
   return response;
 }
+
+export async function scanWiFi() {
+  const result = execSync("netsh wlan show networks mode=Bssid", {
+    encoding: "utf-8",
+  });
+
+  const lines = result
+    .split(/\r*\n/)
+    .filter((line) => line !== "" && line !== " ");
+
+  interface NetProps {
+    ssid: string;
+    type: string;
+    authentication: string;
+    encryption: string;
+    mac: string;
+    signal: number;
+    radioType: string;
+    band: string;
+    channel: number;
+    basicRates: Array<string>;
+    otherRates: Array<string>;
+  }
+
+  const networks: Array<NetProps> = [];
+
+  let netProps: NetProps = {
+    ssid: "",
+    type: "",
+    authentication: "",
+    encryption: "",
+    mac: "",
+    signal: 0,
+    radioType: "",
+    band: "",
+    channel: -1,
+    basicRates: [""],
+    otherRates: [""],
+  };
+
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
+
+    const [prop, value] = line.split(" : ");
+    if (prop.includes("SSID")) {
+      netProps.ssid = value;
+      netProps.type = lines[index + 1].split(" : ")[1];
+      netProps.authentication = lines[index + 2].split(" : ")[1];
+      netProps.encryption = lines[index + 3].split(" : ")[1];
+      netProps.mac = lines[index + 4].split(" : ")[1];
+      netProps.signal = parseInt(
+        lines[index + 5].split(" : ")[1].replace("%", "")
+      );
+      netProps.radioType = lines[index + 6].split(" : ")[1];
+      netProps.band = lines[index + 7].split(" : ")[1];
+      netProps.channel = parseInt(lines[index + 8].split(" : ")[1]);
+      netProps.basicRates = lines[index + 9].split(" : ")[1].split(" ");
+      netProps.otherRates = lines[index + 10].split(" : ")[1].split(" ");
+
+      networks.push({ ...netProps });
+      index += 10;
+    }
+  }
+
+  return networks.sort((a: NetProps, b: NetProps) => b.signal - a.signal);
+}
