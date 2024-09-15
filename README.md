@@ -59,6 +59,49 @@ sysnet
 
 ## API Reference
 
+### `getStatus()`
+
+Retrieves the current status and which of the network interfaces are being used on the system.
+
+- **Returns:** An object containing the status as a bollean value and an array of interface names:
+
+```javascript
+{
+  connected: Boolean;
+  interfaces: Array<string>;
+}
+```
+
+### `getInterfaces()`
+
+Retrieves the details of the network interfaces on the system as reported by the OS.
+
+- **Returns:** An array of objects containing the details of each interface.
+
+### `getConnections()`
+
+Retrieves all the connections as reported by the OS.
+
+- **Returns:** An array of objects containing the connections and their details:
+
+```javascript
+// example
+[
+  {
+    name: "Wi-Fi",
+    state: "Disconnected",
+    type: "Dedicated",
+    adminState: "Enabled",
+  },
+  {
+    name: "Ethernet",
+    state: "Connected",
+    type: "Dedicated",
+    adminState: "Enabled",
+  },
+];
+```
+
 ### `connectToWiFi(ssid, password)`
 
 Connects to a WiFi network using the provided SSID and password.
@@ -68,37 +111,36 @@ Connects to a WiFi network using the provided SSID and password.
   - `ssid` (string): The name (SSID) of the WiFi network.
   - `password` (string): The password for the WiFi network.
 
-- **Returns:** A promise that resolves when the connection is successful or rejects with an error.
+- **Returns:** An object containing the status of the request and the error message:
 
-### `disconnectFromWiFi()`
+```javascript
+{
+  success: boolean;
+  error: "no-error" | "unknown-error";
+}
+```
 
-Disconnects from the current WiFi network.
+### `scanWiFi()`
 
-- **Returns:** A promise that resolves when the disconnection is successful or rejects with an error.
+Retrieves the currently available WiFi networks.
 
-### `configureStaticIP(ip, netmask, gateway)`
+- **Returns:** An array of objects containing the networks along with their details. The networks are sorted in descending order by their signal strength:
 
-Configures a static IP address for the network interface.
-
-- **Parameters:**
-
-  - `ip` (string): The desired static IP address.
-  - `netmask` (string): The subnet mask (e.g., `255.255.255.0`).
-  - `gateway` (string): The default gateway IP address.
-
-- **Returns:** A promise that resolves when the static IP is successfully configured or rejects with an error.
-
-### `enableDHCP()`
-
-Enables DHCP for the network interface, allowing the system to dynamically acquire an IP address.
-
-- **Returns:** A promise that resolves when DHCP is enabled or rejects with an error.
-
-### `getNetworkStatus()`
-
-Retrieves the current status and configuration details of the network interfaces on the system.
-
-- **Returns:** A promise that resolves with the network status details or rejects with an error.
+```javascript
+{
+  ssid: string;
+  type: string;
+  authentication: string;
+  encryption: string;
+  mac: string;
+  signal: number;
+  radioType: string;
+  band: string;
+  channel: number;
+  basicRates: Array<string>;
+  otherRates: Array<string>;
+}
+```
 
 ## Error Handling
 

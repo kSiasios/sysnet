@@ -12,16 +12,22 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.scanWiFi = exports.getStatus = exports.getInterfaces = void 0;
+exports.getInterfaces = getInterfaces;
+exports.getStatus = getStatus;
+exports.scanWiFi = scanWiFi;
+exports.connectToNetwork = connectToNetwork;
+exports.getConnections = getConnections;
 const child_process_1 = require("child_process");
 const os_1 = __importDefault(require("os"));
+const fs_1 = __importDefault(require("fs"));
+const xmlbuilder2_1 = require("xmlbuilder2");
+const path_1 = __importDefault(require("path"));
 function getInterfaces() {
     return __awaiter(this, void 0, void 0, function* () {
         const response = yield os_1.default.networkInterfaces();
         return response;
     });
 }
-exports.getInterfaces = getInterfaces;
 function getStatus() {
     const result = (0, child_process_1.execSync)("netsh interface show interface", {
         encoding: "utf-8",
@@ -37,7 +43,7 @@ function getStatus() {
     });
     const resultMatrix = matrix.filter((line) => line.length > 1);
     const response = {
-        connected: true,
+        connected: false,
         interfaces: [],
     };
     resultMatrix.forEach((line) => {
@@ -48,7 +54,6 @@ function getStatus() {
     });
     return response;
 }
-exports.getStatus = getStatus;
 function scanWiFi() {
     return __awaiter(this, void 0, void 0, function* () {
         const result = (0, child_process_1.execSync)("netsh wlan show networks mode=Bssid", {
@@ -93,4 +98,111 @@ function scanWiFi() {
         return networks.sort((a, b) => b.signal - a.signal);
     });
 }
-exports.scanWiFi = scanWiFi;
+function connectToNetwork(ssid_1, password_1) {
+    return __awaiter(this, arguments, void 0, function* (ssid, password, maxIterations = 50) {
+        try {
+            const profileName = ssid;
+            const profileXml = (0, xmlbuilder2_1.create)({ version: "1.0" })
+                .ele("WLANProfile", {
+                xmlns: "http://www.microsoft.com/networking/WLAN/profile/v1",
+            })
+                .ele("name")
+                .txt(profileName)
+                .up()
+                .ele("SSIDConfig")
+                .ele("SSID")
+                .ele("name")
+                .txt(ssid)
+                .up()
+                .up()
+                .ele("nonBroadcast")
+                .txt("false")
+                .up()
+                .up()
+                .ele("connectionType")
+                .txt("ESS")
+                .up()
+                .ele("connectionMode")
+                .txt("auto")
+                .up()
+                .ele("MSM")
+                .ele("security")
+                .ele("authEncryption")
+                .ele("authentication")
+                .txt("WPA2PSK")
+                .up()
+                .ele("encryption")
+                .txt("AES")
+                .up()
+                .ele("useOneX")
+                .txt("false")
+                .up()
+                .up()
+                .ele("sharedKey")
+                .ele("keyType")
+                .txt("passPhrase")
+                .up()
+                .ele("protected")
+                .txt("false")
+                .up()
+                .ele("keyMaterial")
+                .txt(password)
+                .up()
+                .up()
+                .up()
+                .up()
+                .up();
+            const profilePath = path_1.default.join(__dirname, `${profileName}.xml`);
+            fs_1.default.writeFileSync(profilePath, profileXml.toString());
+            yield (0, child_process_1.execSync)(`netsh wlan add profile filename="${profilePath}"`, {
+                encoding: "utf-8",
+            });
+            yield (0, child_process_1.execSync)(`netsh wlan connect name="${ssid}"`, {
+                encoding: "utf-8",
+            });
+            let conn = (yield getConnections()).filter((conn) => conn.name === "Wi-Fi")[0];
+            let iteration = 0;
+            while (iteration <= maxIterations && conn.state !== "Connected") {
+                conn = (yield getConnections()).filter((conn) => conn.name === "Wi-Fi")[0];
+                iteration++;
+            }
+            if (conn.state === "Connected") {
+                return { success: true, error: "no-error" };
+            }
+            if (conn.state === "Connecting") {
+                return { success: false, error: "connecting" };
+            }
+            return { success: false, error: "unknown-error" };
+        }
+        catch (error) {
+            return { success: false, error: "unknown-error" };
+        }
+    });
+}
+function getConnections() {
+    const result = (0, child_process_1.execSync)("netsh interface show interface", {
+        encoding: "utf-8",
+    });
+    const lines = result.split(/\r*\n/).filter((line) => line !== "");
+    const matrix = new Array();
+    lines.forEach((line) => {
+        const splitLine = line
+            .split("  ")
+            .filter((elem) => elem !== "")
+            .map((cell) => cell.trim());
+        matrix.push(splitLine);
+    });
+    const resultMatrix = matrix.filter((line) => line.length > 1).slice(1);
+    const response = [];
+    resultMatrix.forEach((line) => {
+        // if (line.includes("Connected")) {
+        response.push({
+            name: line[3],
+            state: line[1],
+            type: line[2],
+            adminState: line[0],
+        });
+        // }
+    });
+    return response;
+}
