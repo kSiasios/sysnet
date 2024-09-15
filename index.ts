@@ -175,10 +175,10 @@ export async function connectToNetwork(
     const profilePath = path.join(__dirname, `${profileName}.xml`);
     fs.writeFileSync(profilePath, profileXml.toString());
 
-    await execSync(`netsh wlan add profile filename="${profilePath}"`, {
+    execSync(`netsh wlan add profile filename="${profilePath}"`, {
       encoding: "utf-8",
     });
-    await execSync(`netsh wlan connect name="${ssid}"`, {
+    execSync(`netsh wlan connect name="${ssid}"`, {
       encoding: "utf-8",
     });
 
@@ -251,4 +251,14 @@ export function getConnections() {
   });
 
   return response;
+}
+
+export function disconnectFromWiFi() {
+  const result = execSync("netsh wlan disconnect", {
+    encoding: "utf-8",
+  });
+
+  return {
+    success: result.toLowerCase().includes(" success"),
+  };
 }

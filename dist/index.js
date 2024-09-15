@@ -17,6 +17,7 @@ exports.getStatus = getStatus;
 exports.scanWiFi = scanWiFi;
 exports.connectToNetwork = connectToNetwork;
 exports.getConnections = getConnections;
+exports.disconnectFromWiFi = disconnectFromWiFi;
 const child_process_1 = require("child_process");
 const os_1 = __importDefault(require("os"));
 const fs_1 = __importDefault(require("fs"));
@@ -154,10 +155,10 @@ function connectToNetwork(ssid_1, password_1) {
                 .up();
             const profilePath = path_1.default.join(__dirname, `${profileName}.xml`);
             fs_1.default.writeFileSync(profilePath, profileXml.toString());
-            yield (0, child_process_1.execSync)(`netsh wlan add profile filename="${profilePath}"`, {
+            (0, child_process_1.execSync)(`netsh wlan add profile filename="${profilePath}"`, {
                 encoding: "utf-8",
             });
-            yield (0, child_process_1.execSync)(`netsh wlan connect name="${ssid}"`, {
+            (0, child_process_1.execSync)(`netsh wlan connect name="${ssid}"`, {
                 encoding: "utf-8",
             });
             let conn = (yield getConnections()).filter((conn) => conn.name === "Wi-Fi")[0];
@@ -205,4 +206,12 @@ function getConnections() {
         // }
     });
     return response;
+}
+function disconnectFromWiFi() {
+    const result = (0, child_process_1.execSync)("netsh wlan disconnect", {
+        encoding: "utf-8",
+    });
+    return {
+        success: result.toLowerCase().includes(" success"),
+    };
 }
