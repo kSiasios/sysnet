@@ -120,6 +120,18 @@ Connects to a WiFi network using the provided SSID and password.
 }
 ```
 
+### `disconnectFromWiFi()`
+
+Disconnects from WiFi (does **_not_** disable wifi adapter device).
+
+- **Returns:** An object containing the status of the request:
+
+```javascript
+{
+  success: true | false;
+}
+```
+
 ### `scanWiFi()`
 
 Retrieves the currently available WiFi networks.
@@ -151,8 +163,15 @@ Example:
 ```javascript
 async function setupNetwork() {
   try {
-    await sysnet.connectToWiFi("MyNetworkSSID", "password123");
-    console.log("Connected to WiFi");
+    const { success, error } = await sysnet.connectToWiFi(
+      "MyNetworkSSID",
+      "password123"
+    );
+    if (success) {
+      console.log("Connected to WiFi");
+      return;
+    }
+    cnsole.error(error);
   } catch (error) {
     console.error("Failed to connect:", error);
   }
